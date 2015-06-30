@@ -1,27 +1,42 @@
+//
+//***SHIFT REG LAYOUT***
+//  Bit 5  D7
+//  Bit 4  D6
+//  Bit 3  D5
+//  Bit 2  D4
+//  Bit 1  RW
+//  Bit 0  RS
+//
+//
+//
+
+
 #define enbl 13
 #define srl 11
 #define clk 8
 #define LCDpow 9
 
+char m[16];
+
 String line1,line2;
 
 void clock(){
-  delay(1);
+  delayMicroseconds(10);
   digitalWrite(clk,HIGH);
-  delay(1);
+  delayMicroseconds(10);
   digitalWrite(clk,LOW);
-  delay(1);
+  delayMicroseconds(10);
 }
 
 void enable(){
-  delay(1);
+  delayMicroseconds(10);
   digitalWrite(enbl,HIGH);
-  delay(1);
+  delayMicroseconds(10);
   digitalWrite(enbl,LOW);
-  delay(1);
+  delayMicroseconds(10);
 }
 
-//6 LSB are (MSB) D7,D6,D5,D4,RW,RS (LSB)
+
 void sendMessage(unsigned char msg){
   for(int i=0;i<6;i++){
     if(msg&0b100000)
@@ -80,6 +95,36 @@ void displayString(int lineNum,char *msg)
     }
   }
 }
+
+void drawChar(int charIndex, char *drawing){
+
+  //format the character index by choosing the correct row and
+  //adding a bit in position D6 to signal CG RAM address info
+  char formattedIndex = charIndex * 8 + (1<<6);
+  
+  //send start address for CG RAM characters
+  sendMessage((formattedIndex>>2) & 0b111100);
+  sendMessage((formattedIndex<<2) & 0b111100);
+
+  //start drawing character
+  for(int i=0;i<8;i++){
+    sendMessage(((drawing[i]>>2) & 0b111100) + 1);
+    sendMessage(((drawing[i]<<2) & 0b111100) + 1);
+  }
+
+//    sendMessage(0b101);
+//    sendMessage(0b101);
+  setDDRAM(0);
+}
+
+void showPercent(int p,char *l){
+  l[15]='%';
+  int ones;
+  ones=p%10;
+  l[14]=ones+48;
+  l[13]=p/10+48;
+  
+}
   
 void setup() {
   pinMode(enbl, OUTPUT);
@@ -111,14 +156,106 @@ void setup() {
   sendMessage(0b000000);
   sendMessage(0b011000);  
   
+  char test[8]={
+    0b10000,
+    0b10000,
+    0b10000,
+    0b10000,
+    0b10000,
+    0b10000,
+    0b10000,
+    0b10000};
+
+  char test1[8]={
+    0b11000,
+    0b11000,
+    0b11000,
+    0b11000,
+    0b11000,
+    0b11000,
+    0b11000,
+    0b11000};
+
+
+  char test2[8]={
+    0b11100,
+    0b11100,
+    0b11100,
+    0b11100,
+    0b11100,
+    0b11100,
+    0b11100,
+    0b11100};
+
+  char test3[8]={
+    0b11110,
+    0b11110,
+    0b11110,
+    0b11110,
+    0b11110,
+    0b11110,
+    0b11110,
+    0b11110};
+  
+  
+  char test4[8]={
+    0b11111,
+    0b11111,
+    0b11111,
+    0b11111,
+    0b11111,
+    0b11111,
+    0b11111,
+    0b11111};
+  
+  drawChar(0,test);
+  drawChar(1,test1);
+  drawChar(2,test2);
+  drawChar(3,test3);
+  drawChar(4,test4);
+  
+  
   //type name
   char amot[16]="String 1";
   displayString(1,amot);
-  char illw[16]="String 2";
-  displayString(2,illw);
+  
+  //turn off cursor
+  sendMessage(0);
+  sendMessage(0b110000);
 }
 
 void loop() {
-
+  int percent=0;
+  for(int k=0;k<10;k++){
+    m[k]=0;
+    displayString(2,m);
+    percent+=2;
+    showPercent(percent,m);
+    delay(100);
+    m[k]=1;
+    displayString(2,m);
+    percent+=2;
+    showPercent(percent,m);
+    delay(100);
+    m[k]=2;
+    displayString(2,m);
+    percent+=2;
+    showPercent(percent,m);
+    delay(100);
+    m[k]=3;
+    displayString(2,m);
+    percent+=2;
+    showPercent(percent,m);
+    delay(100);
+    m[k]=4;
+    displayString(2,m);
+    percent+=2;
+    showPercent(percent,m);
+    delay(100);
+    m[k]=0xff;
+  }
+  for(int k=0;k<16;k++){
+    m[k]=' ';
+  }
 
 }
